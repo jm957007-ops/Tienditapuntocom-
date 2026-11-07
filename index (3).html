@@ -1,0 +1,216 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Tiendita punto com Altamira</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--tx:#1d1d1f;--mu:#6b6b70;--ac:#e4572e;--ac2:#1f6f5c;--bd:#e3e0d8;--ad:#fff3c4;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17181a;--card:#222426;--tx:#f1f1f1;--mu:#a0a0a6;--bd:#34363a;--ad:#3a3416;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17181a;--card:#222426;--tx:#f1f1f1;--mu:#a0a0a6;--bd:#34363a;--ad:#3a3416;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.4}
+.w{max-width:960px;margin:0 auto;padding:12px 14px 40px}
+header{text-align:center;padding:14px 0 6px}
+h1{margin:0;font-size:1.5rem;letter-spacing:.5px}
+h1 span{color:var(--ac)}
+.sub{display:inline-block;border-bottom:3px solid var(--ac2);font-weight:700;margin-top:2px}
+.ad{background:var(--ad);border:2px dashed var(--ac);border-radius:14px;padding:16px;text-align:center;margin:12px 0;min-height:92px;display:flex;flex-direction:column;justify-content:center;transition:opacity .3s}
+.ad small{color:var(--mu);font-size:.7rem;text-transform:uppercase;letter-spacing:1px}
+.ad b{font-size:1.15rem}
+h2{font-size:1.15rem;margin:26px 0 10px}
+.pics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pic{aspect-ratio:1;border:2px solid var(--bd);border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:2.2rem}
+.btn{display:block;width:100%;margin-top:10px;padding:12px;border:2px solid var(--tx);background:var(--card);color:var(--tx);font-weight:700;font-size:1rem;border-radius:8px;cursor:pointer}
+.btn.p{background:var(--ac);border-color:var(--ac);color:#fff}
+.two{display:grid;gap:18px;grid-template-columns:1fr}
+@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px}
+.box h2{margin-top:2px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+.prod{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px;text-align:center}
+.prod .pic{border-style:dashed;margin-bottom:6px}
+.prod .pr{font-weight:800;color:var(--ac2);font-size:1.1rem}
+.prod button{margin-top:6px;width:100%;padding:8px;border:0;border-radius:8px;background:var(--ac2);color:#fff;font-weight:600;cursor:pointer}
+.cart{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));margin-top:14px;display:none}
+.cart.on{display:block}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:90%;overflow:auto}
+label{display:block;font-size:.85rem;color:var(--mu);margin:10px 0 3px}
+input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:1rem}
+.tot{font-size:1.6rem;font-weight:800;color:var(--ac);margin:12px 0 2px}
+.note{font-size:.78rem;color:var(--mu)}
+.x{float:right;background:none;border:0;font-size:1.5rem;color:var(--tx);cursor:pointer}
+footer{text-align:center;color:var(--mu);font-size:.8rem;margin-top:30px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.25.6/babel.min.js"></script></head>
+<body><div id="root"><p style="text-align:center;padding:40px;font-family:sans-serif">Cargando…</p></div>
+<script type="text/babel" data-type="module">
+import React,{useEffect,useState} from 'https://esm.sh/react@18.3.1';
+import {createRoot} from 'https://esm.sh/react-dom@18.3.1/client?deps=react@18.3.1';
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getFirestore,collection,doc,onSnapshot,query,limit,writeBatch,increment,getDoc,setDoc,deleteDoc,updateDoc} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import {getAuth,signInAnonymously,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+const fbApp=initializeApp({"apiKey": "AIzaSyA8U1VqvFHKci1l7mFsGTh99FWm2jzCXL8", "authDomain": "tienditapuntocom.firebaseapp.com", "projectId": "tienditapuntocom", "storageBucket": "tienditapuntocom.firebasestorage.app", "messagingSenderId": "355799983790", "appId": "1:355799983790:web:055c1be4fc00f41b9b2f3f"});
+const db=getFirestore(fbApp),auth=getAuth(fbApp),WA='528335329332';
+
+const MAXV=500,MAXP=10
+const ADS=[
+ {n:'Tu anuncio aquí',t:'Espacio publicitario para negocios de Altamira'},
+ {n:'Renta de sillas y mesas',t:'Para tus fiestas y eventos, cotiza al instante'},
+ {n:'Fletes económicos',t:'Mudanzas y cargas en toda la zona conurbada'}]
+const wa=(num,m)=>window.open(`https://wa.me/${num}?text=${encodeURIComponent(m)}`,'_blank')
+
+function Modal({title,onClose,children}){
+ return <div className="modal on" onClick={e=>e.target===e.currentTarget&&onClose()}>
+  <div className="sheet"><button className="x" onClick={onClose}>×</button><h2 style={{marginTop:0}}>{title}</h2>{children}</div></div>
+}
+
+function Sillas({onClose}){
+ const [s,setS]=useState(20),[m,setM]=useState(3),[d,setD]=useState(1),[en,setEn]=useState(0),[f,setF]=useState('')
+ const tot=(s*5+m*40)*Math.max(1,d)+en
+ return <Modal title="Cotizar sillas y mesas" onClose={onClose}>
+  <label>Sillas</label><input type="number" min="0" value={s} onChange={e=>setS(+e.target.value)}/>
+  <label>Mesas</label><input type="number" min="0" value={m} onChange={e=>setM(+e.target.value)}/>
+  <label>Días de renta</label><input type="number" min="1" value={d} onChange={e=>setD(+e.target.value)}/>
+  <label>Entrega</label><select value={en} onChange={e=>setEn(+e.target.value)}><option value={0}>Yo recojo</option><option value={100}>Entrega en Altamira</option><option value={180}>Entrega Tampico/Madero</option></select>
+  <label>Fecha del evento</label><input type="date" value={f} onChange={e=>setF(e.target.value)}/>
+  <div className="tot">Total estimado: ${tot}</div><div className="note">Precios de ejemplo: silla $5, mesa $40 por día.</div>
+  <button className="btn p" onClick={()=>wa(WA,`Hola, quiero cotizar renta:\n${s} sillas, ${m} mesas, ${d} día(s)\nFecha: ${f||'por definir'}\nEstimado: $${tot}`)}>Enviar por WhatsApp</button>
+ </Modal>
+}
+
+function Fletes({onClose}){
+ const [o,setO]=useState(''),[de,setDe]=useState(''),[z,setZ]=useState(250),[v,setV]=useState(1),[ay,setAy]=useState(0),[q,setQ]=useState('')
+ const tot=Math.round(z*v+ay)
+ return <Modal title="Cotizar flete económico" onClose={onClose}>
+  <label>Origen</label><input value={o} onChange={e=>setO(e.target.value)} placeholder="Colonia / dirección"/>
+  <label>Destino</label><input value={de} onChange={e=>setDe(e.target.value)} placeholder="Colonia / dirección"/>
+  <label>Zona</label><select value={z} onChange={e=>setZ(+e.target.value)}><option value={250}>Dentro de Altamira</option><option value={380}>Altamira ↔ Tampico/Madero</option><option value={550}>Fuera de la zona conurbada</option></select>
+  <label>Vehículo</label><select value={v} onChange={e=>setV(+e.target.value)}><option value={1}>Camioneta pickup</option><option value={1.6}>Camión 3.5 ton</option></select>
+  <label>Ayudante de carga</label><select value={ay} onChange={e=>setAy(+e.target.value)}><option value={0}>No</option><option value={150}>Sí (+$150)</option></select>
+  <label>Qué vas a mover</label><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Ej. sala, refri, cajas"/>
+  <div className="tot">Total estimado: ${tot}</div><div className="note">Estimado, el precio final se confirma por WhatsApp.</div>
+  <button className="btn p" onClick={()=>wa(WA,`Hola, quiero cotizar un flete:\nOrigen: ${o}\nDestino: ${de}\nVehículo: ${v===1?'Pickup':'Camión 3.5 ton'}\nAyudante: ${ay?'Sí':'No'}\nCarga: ${q}\nEstimado: $${tot}`)}>Enviar por WhatsApp</button>
+ </Modal>
+}
+
+function Puesto({v,onClose}){
+ return <Modal title={v.name} onClose={onClose}><div className="grid">
+  {v.products.map((p,k)=><div className="prod" key={k}><div className="pic">{p.e||'📦'}</div><div>{p.n}</div><div className="pr">${p.p}</div>
+   <button onClick={()=>wa('52'+v.phone,`Hola ${v.name}, vi tu puesto en Tiendita punto com Altamira y quiero: ${p.n} ($${p.p})`)}>Pedir</button></div>)}
+ </div></Modal>
+}
+
+const genPin=()=>String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000)
+
+function VendorLogin({uid,onDone,onClose}){
+ const [phone,setPhone]=useState(''),[pin,setPin]=useState(''),[msg,setMsg]=useState('')
+ async function enter(){
+  const ph=phone.replace(/\D/g,'')
+  if(ph.length!==10||pin.length<4)return setMsg('Escribe tu teléfono de 10 dígitos y tu PIN.')
+  try{await setDoc(doc(db,'sessions',uid),{phone:ph,pin:pin.trim()});onDone(ph)}catch(e){setMsg('Teléfono o PIN incorrecto.')}
+ }
+ return <Modal title="Entrar a mi puesto" onClose={onClose}>
+  <label>Teléfono registrado (10 dígitos)</label><input inputMode="numeric" maxLength={10} value={phone} onChange={e=>setPhone(e.target.value)}/>
+  <label>PIN</label><input type="password" inputMode="numeric" maxLength={8} value={pin} onChange={e=>setPin(e.target.value)}/>
+  <button className="btn p" onClick={enter}>Entrar</button>
+  <div className="note">{msg||'Tu PIN te lo da el administrador.'}</div>
+ </Modal>
+}
+
+function MiPuesto({v,uid,onClose,onExit}){
+ const [name,setName]=useState(v.name),[rows,setRows]=useState(v.products.length?v.products:[{e:'',n:'',p:''}]),[msg,setMsg]=useState('')
+ const upd=(i,k,val)=>setRows(r=>r.map((x,j)=>j===i?{...x,[k]:val}:x))
+ async function save(){
+  const products=rows.filter(r=>String(r.n).trim()).slice(0,MAXP).map(r=>({e:String(r.e).trim(),n:String(r.n).trim(),p:+r.p||0}))
+  if(!name.trim())return setMsg('Pon el nombre de tu puesto.')
+  try{await updateDoc(doc(db,'vendors',v.id),{name:name.trim(),products});onClose()}catch(e){setMsg('No se pudo guardar. Intenta de nuevo.')}
+ }
+ return <Modal title="Mi puesto" onClose={onClose}>
+  <label>Nombre del puesto</label><input maxLength={40} value={name} onChange={e=>setName(e.target.value)}/>
+  <label>Productos (máx. {MAXP}): emoji, nombre y precio</label>
+  {rows.map((r,i)=><div key={i} style={{display:'flex',gap:6,marginBottom:6}}>
+   <input style={{width:52}} maxLength={2} placeholder="🧴" value={r.e} onChange={e=>upd(i,'e',e.target.value)}/>
+   <input maxLength={40} placeholder="Producto" value={r.n} onChange={e=>upd(i,'n',e.target.value)}/>
+   <input type="number" min="0" style={{width:84}} placeholder="$" value={r.p} onChange={e=>upd(i,'p',e.target.value)}/>
+   <button className="x" style={{fontSize:'1.2rem'}} onClick={()=>setRows(rows.filter((_,j)=>j!==i))}>×</button></div>)}
+  {rows.length<MAXP&&<button className="btn" onClick={()=>setRows([...rows,{e:'',n:'',p:''}])}>+ Agregar producto</button>}
+  <button className="btn p" onClick={save}>Guardar puesto</button>
+  <button className="btn" onClick={async()=>{try{await deleteDoc(doc(db,'sessions',uid))}catch(e){};onExit()}}>Cerrar sesión</button>
+  <div className="note">{msg}</div>
+ </Modal>
+}
+
+function Admin({uid,isAdmin,setIsAdmin,V,onClose}){
+ const [code,setCode]=useState(''),[msg,setMsg]=useState(''),[n,setN]=useState(''),[t,setT]=useState(''),[pin,setPin]=useState(genPin()),[pins,setPins]=useState({})
+ useEffect(()=>{if(!isAdmin)return;return onSnapshot(collection(db,'pins'),s=>{const o={};s.docs.forEach(d=>o[d.id]=d.data().pin);setPins(o)})},[isAdmin])
+ async function enter(){setMsg('');try{await setDoc(doc(db,'admins',uid),{code:code.trim()});setIsAdmin(true)}catch(e){setMsg('Código incorrecto.')}}
+ async function add(){
+  const ph=t.replace(/\D/g,'')
+  if(!n.trim()||ph.length!==10||pin.trim().length<4)return setMsg('Pon nombre, teléfono de 10 dígitos y PIN (mínimo 4).')
+  if(V.some(v=>v.id===ph))return setMsg('Ese teléfono ya está registrado.')
+  if(V.length>=MAXV)return setMsg(`Límite de ${MAXV} vendedores.`)
+  const b=writeBatch(db);b.set(doc(db,'vendors',ph),{name:n.trim(),phone:ph,products:[]});b.set(doc(db,'pins',ph),{pin:pin.trim()});b.set(doc(db,'meta','counter'),{count:increment(1)},{merge:true})
+  try{await b.commit();setN('');setT('');setPin(genPin());setMsg(`Agregado. PIN de ${ph}: ${pin.trim()}`)}catch(e){setMsg('No se pudo agregar.')}
+ }
+ async function del(v){
+  if(!confirm(`¿Quitar a "${v.name}"?`))return
+  const b=writeBatch(db);b.delete(doc(db,'vendors',v.id));b.delete(doc(db,'pins',v.id));b.set(doc(db,'meta','counter'),{count:increment(-1)},{merge:true})
+  try{await b.commit()}catch(e){setMsg('No se pudo quitar.')}
+ }
+ async function newPin(v){const p=genPin();try{await setDoc(doc(db,'pins',v.id),{pin:p});setMsg(`Nuevo PIN de ${v.name}: ${p}`)}catch(e){setMsg('No se pudo cambiar el PIN.')}}
+ async function exit(){try{await deleteDoc(doc(db,'admins',uid))}catch(e){};setIsAdmin(false);onClose()}
+ if(!isAdmin)return <Modal title="Administrador" onClose={onClose}>
+  <label>Código de administrador</label><input type="password" value={code} onChange={e=>setCode(e.target.value)}/>
+  <button className="btn p" onClick={enter}>Entrar</button><div className="note">{msg}</div></Modal>
+ return <Modal title={`Administrador · ${V.length}/${MAXV}`} onClose={onClose}>
+  <label>Nombre del vendedor</label><input maxLength={40} value={n} onChange={e=>setN(e.target.value)}/>
+  <label>Teléfono (10 dígitos)</label><input inputMode="numeric" maxLength={10} value={t} onChange={e=>setT(e.target.value)}/>
+  <label>PIN (lo puedes cambiar)</label><input inputMode="numeric" maxLength={8} value={pin} onChange={e=>setPin(e.target.value)}/>
+  <button className="btn p" onClick={add}>Agregar vendedor</button><div className="note" style={{fontWeight:700}}>{msg}</div>
+  <div style={{marginTop:10}}>{V.map(v=><div key={v.id} style={{display:'flex',gap:8,alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--bd)'}}>
+   <div style={{flex:1}}><b>{v.name}</b><div className="note">{v.phone} · PIN {pins[v.id]||'—'} · {v.products.length} productos</div></div>
+   <button className="btn" style={{margin:0,width:'auto',padding:'6px 10px'}} onClick={()=>newPin(v)}>Nuevo PIN</button>
+   <button className="btn" style={{margin:0,width:'auto',padding:'6px 10px',borderColor:'#c0392b',color:'#c0392b'}} onClick={()=>del(v)}>Quitar</button></div>)}
+   {!V.length&&<div className="note">No hay vendedores.</div>}</div>
+  <button className="btn" onClick={exit}>Salir del modo administrador</button>
+ </Modal>
+}
+
+function App(){
+ const [ad,setAd]=useState(0),[user,setUser]=useState(null),[vid,setVid]=useState(null),[V,setV]=useState([]),[q,setQ]=useState(''),[modal,setModal]=useState(null),[sel,setSel]=useState(null),[isAdmin,setIsAdmin]=useState(false)
+ useEffect(()=>{const t=setInterval(()=>setAd(a=>a+1),4500);return()=>clearInterval(t)},[])
+ useEffect(()=>onAuthStateChanged(auth,u=>u?setUser(u):signInAnonymously(auth).catch(()=>{})),[])
+ const uid=user?.uid
+ useEffect(()=>{setIsAdmin(false);if(uid){getDoc(doc(db,'admins',uid)).then(d=>setIsAdmin(d.exists())).catch(()=>{});getDoc(doc(db,'sessions',uid)).then(d=>setVid(d.exists()?d.data().phone:null)).catch(()=>{})}},[uid])
+ useEffect(()=>onSnapshot(query(collection(db,'vendors'),limit(MAXV)),s=>setV(s.docs.map(d=>({id:d.id,...d.data()})))),[])
+ const mine=V.find(v=>v.id===vid)
+ const L=V.filter(v=>!q||v.name.toLowerCase().includes(q.toLowerCase())||v.products.some(p=>p.n.toLowerCase().includes(q.toLowerCase())))
+ const a=ADS[ad%ADS.length]
+ return <div className="w">
+  <header><h1>TIENDITA<span>PUNTO</span>COM</h1><div className="sub">ALTAMIRA</div></header>
+  <div className="ad"><small>Publicidad</small><b>{a.n}</b><span>{a.t}</span></div>
+  <div className="two">
+   <section className="box"><h2>Renta de sillas y mesas Altamira</h2><div className="pics"><div className="pic">🪑</div><div className="pic">🍽️</div><div className="pic">⛺</div></div><button className="btn" onClick={()=>setModal('s')}>Cotizar</button></section>
+   <section className="box"><h2>Fletes económicos</h2><div className="pics"><div className="pic">🛻</div><div className="pic">📦</div><div className="pic">🚚</div></div><button className="btn" onClick={()=>setModal('f')}>Cotizar</button></section>
+  </div>
+  <h2>Tianguis <span className="note">({V.length}/{MAXV} puestos)</span></h2>
+  <div style={{display:'flex',gap:8}}><input placeholder="Buscar puesto o producto" value={q} onChange={e=>setQ(e.target.value)}/>
+   <button className="btn p" style={{margin:0,width:'auto',whiteSpace:'nowrap'}} onClick={()=>setModal(vid?'m':'l')}>Mi puesto</button></div>
+  <div className="grid" style={{marginTop:10}}>{L.map(v=><div className="prod" key={v.id} style={{cursor:'pointer'}} onClick={()=>setSel(v)}>
+   <div className="pic">{v.products[0]?.e||'🏪'}</div><b>{v.name}</b><div className="note">{v.products.length} productos</div></div>)}</div>
+  {!L.length&&<div className="note" style={{textAlign:'center',padding:20}}>{V.length?'Sin resultados.':'Aún no hay puestos.'}</div>}
+  <div className="ad" style={{marginTop:26}}><small>Publicidad</small><b>¿Tu negocio aquí?</b><span>Anúnciate en Tiendita punto com Altamira</span>
+   <a href="#" style={{color:'var(--ac)',fontWeight:700}} onClick={e=>{e.preventDefault();wa(WA,'Hola, quiero anunciar mi negocio en Tiendita punto com Altamira')}}>Pregunta por tu espacio</a></div>
+  <footer>Tiendita punto com Altamira · Cotizaciones estimadas, se confirman por WhatsApp<br/><a href="#" style={{color:'inherit'}} onClick={e=>{e.preventDefault();setModal('a')}}>Administrador</a></footer>
+  {modal==='s'&&<Sillas onClose={()=>setModal(null)}/>}
+  {modal==='f'&&<Fletes onClose={()=>setModal(null)}/>}
+  {modal==='l'&&uid&&<VendorLogin uid={uid} onDone={ph=>{setVid(ph);setModal('m')}} onClose={()=>setModal(null)}/>}
+  {modal==='m'&&mine&&<MiPuesto v={mine} uid={uid} onClose={()=>setModal(null)} onExit={()=>{setVid(null);setModal(null)}}/>}
+  {modal==='a'&&uid&&<Admin uid={uid} isAdmin={isAdmin} setIsAdmin={setIsAdmin} V={V} onClose={()=>setModal(null)}/>}
+  {sel&&<Puesto v={sel} onClose={()=>setSel(null)}/>}
+ </div>
+}
+
+createRoot(document.getElementById('root')).render(<App/>)
+</script></body></html>
