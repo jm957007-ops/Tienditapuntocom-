@@ -65,6 +65,17 @@ label{display:block;font-size:.8rem;color:var(--mu);margin:10px 0 4px;font-weigh
 .cam{width:50px;height:50px;border-radius:12px;border:1.5px dashed var(--gold);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;flex:0 0 auto;background:#faf6e8;font-size:1.3rem}
 .cam img{width:100%;height:100%;object-fit:cover}
 .dl{margin-top:16px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1405;border:0;font-size:.95rem;padding:11px 18px;box-shadow:0 6px 16px rgba(200,162,74,.35)}
+.offers{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 14px;scroll-snap-type:x proximity;scrollbar-width:none}.offers::-webkit-scrollbar{display:none}
+.of{flex:0 0 164px;background:linear-gradient(160deg,#fff,#fbf3d9);border:1.5px solid var(--gold);border-radius:18px;padding:10px;cursor:pointer;box-shadow:0 8px 20px rgba(200,162,74,.25);scroll-snap-align:start}
+.ofi{position:relative;height:98px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,var(--ink2),var(--ink));display:flex;align-items:center;justify-content:center;font-size:2.4rem;margin-bottom:8px}
+.ofi img{width:100%;height:100%;object-fit:cover}
+.pct{position:absolute;top:6px;left:6px;background:#c0392b;color:#fff;border-radius:8px;padding:2px 7px;font-size:.78rem}
+.ofn{font-weight:700;font-size:.9rem;line-height:1.2}.ofv{font-size:.75rem;color:var(--mu);margin-bottom:2px}
+.old{color:var(--mu);font-size:.85rem}.new{font-size:1.2rem;color:#8a6a14}
+.ofl{font-size:.75rem;color:#8a1f12;font-weight:700;margin-top:2px}
+.tag.hot{background:#fde4e0;color:#8a1f12}
+.ofr{display:flex!important;align-items:center;gap:6px;margin:0!important;font-weight:700!important;color:#8a6a14!important;font-size:.85rem!important;white-space:nowrap}
+.ofr input{width:auto!important}
 footer{text-align:center;color:var(--mu);font-size:.78rem;margin-top:34px}
 footer a{color:var(--mu)}
 </style>
@@ -86,6 +97,8 @@ const SEC={sillas:{t:'Renta de sillas y mesas Altamira',s:'Mobiliario para tus e
 const wa=(num,m)=>window.open(`https://wa.me/${num}?text=${encodeURIComponent(m)}`,'_blank')
 const err=e=>(e&&e.code)||'error'
 const rid=()=>Math.random().toString(36).slice(2,8)
+const isOn=(p,now)=>p.oe>now&&p.o>0&&p.o<p.p
+const left=ms=>{const m=Math.max(0,Math.round(ms/60000));return Math.floor(m/60)+' h '+(m%60)+' min'}
 const genPin=()=>String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000)
 function fileToData(file,max=900,qual=0.72){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/im.width);const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',qual))};im.onerror=rej;im.src=r.result};r.onerror=rej;r.readAsDataURL(file)})}
 
@@ -125,15 +138,16 @@ function Fletes({onClose}){
 
 
 function Puesto({v,onClose}){
- const c=catOf(v.cat),[ph,setPh]=useState({})
+ const c=catOf(v.cat),[ph,setPh]=useState({}),now=Date.now()
  useEffect(()=>{getDoc(doc(db,'fotos',v.id)).then(d=>setPh(d.exists()?(d.data().m||{}):{})).catch(()=>{})},[v.id])
  return <Modal title={v.name} onClose={onClose}>
   {c&&<span className="tag">{c[2]} {c[1]}</span>}
   <div className="grid" style={{marginTop:12}}>
-   {v.products.map((p,k)=><div className="pc" key={k}>
+   {v.products.map((p,k)=>{const on=isOn(p,now),price=on?p.o:p.p;return <div className="pc" key={k}>
+    {on&&<div className="tag hot" style={{marginBottom:6}}>⚡ Oferta · {left(p.oe-now)}</div>}
     {ph[p.i]?<img className="pimg" src={ph[p.i]} alt=""/>:<div className="pe">{p.e||(c?c[2]:'📦')}</div>}
-    <div className="pn">{p.n}</div><div className="pr">${p.p}</div>
-    <button className="btn p sm" onClick={()=>wa('52'+v.phone,`Hola ${v.name}, vi tu puesto en Tiendita punto com Altamira y quiero: ${p.n} ($${p.p})`)}>Pedir</button></div>)}
+    <div className="pn">{p.n}</div><div className="pr">{on&&<s className="old">${p.p}</s>} ${price}</div>
+    <button className="btn p sm" onClick={()=>wa('52'+v.phone,`Hola ${v.name}, vi tu puesto en Tiendita punto com Altamira y quiero: ${p.n} ($${price})`)}>Pedir</button></div>})}
   </div>
   {!v.products.length&&<div className="note" style={{marginTop:12}}>Este puesto aún no tiene productos.</div>}
  </Modal>
@@ -156,17 +170,19 @@ function VendorLogin({uid,onDone,onClose}){
 
 function MiPuesto({v,uid,onClose,onExit}){
  const [name,setName]=useState(v.name),[cat,setCat]=useState(v.cat||'comida'),[msg,setMsg]=useState(''),[ph,setPh]=useState({}),[busy,setBusy]=useState(false)
- const [rows,setRows]=useState((v.products.length?v.products:[{n:'',p:''}]).map(r=>({...r,i:r.i||rid()})))
+ const [rows,setRows]=useState((v.products.length?v.products:[{n:'',p:''}]).map(r=>({...r,i:r.i||rid()}))),now=Date.now()
  useEffect(()=>{getDoc(doc(db,'fotos',v.id)).then(d=>{if(d.exists())setPh(d.data().m||{})}).catch(()=>{})},[v.id])
  const upd=(i,k,val)=>setRows(r=>r.map((x,j)=>j===i?{...x,[k]:val}:x))
+ const upd2=(i,o)=>setRows(r=>r.map((x,j)=>j===i?{...x,...o}:x))
  async function pick(e,id){
   const f=e.target.files[0];e.target.value='';if(!f)return
   try{let d=await fileToData(f,420,0.6);if(d.length>90000)d=await fileToData(f,320,0.45);if(d.length>90000)throw {code:'foto-muy-grande'}
    setPh(p=>({...p,[id]:d}));setMsg('')}catch(x){setMsg('No se pudo usar la foto ('+err(x)+').')}
  }
  async function save(){
-  const products=rows.filter(r=>String(r.n).trim()).slice(0,MAXP).map(r=>({e:String(r.e||'').trim(),n:String(r.n).trim(),p:+r.p||0,i:r.i}))
   if(!name.trim())return setMsg('Pon el nombre de tu puesto.')
+  for(const r of rows){if(String(r.n).trim()&&r.oe>Date.now()&&!(+r.o>0&&+r.o<+r.p))return setMsg(`La oferta de "${r.n}" debe ser menor al precio normal.`)}
+  const products=rows.filter(r=>String(r.n).trim()).slice(0,MAXP).map(r=>({e:String(r.e||'').trim(),n:String(r.n).trim(),p:+r.p||0,i:r.i,...(r.oe>Date.now()?{o:+r.o,oe:r.oe}:{})}))
   const m={};products.forEach(p=>{if(ph[p.i])m[p.i]=ph[p.i]})
   if(Object.values(m).join('').length>900000)return setMsg('Las fotos pesan demasiado, quita alguna.')
   setBusy(true)
@@ -178,11 +194,16 @@ function MiPuesto({v,uid,onClose,onExit}){
   <label>Nombre del puesto</label><input maxLength={40} value={name} onChange={e=>setName(e.target.value)}/>
   <label>Categoría</label><select value={cat} onChange={e=>setCat(e.target.value)}>{CATS.map(c=><option key={c[0]} value={c[0]}>{c[2]} {c[1]}</option>)}</select>
   <label>Productos (máx. {MAXP}): foto, nombre y precio</label>
-  {rows.map((r,i)=><div key={r.i} style={{display:'flex',gap:6,marginBottom:8,alignItems:'center'}}>
-   <label className="cam" style={{margin:0}}>{ph[r.i]?<img src={ph[r.i]} alt=""/>:'📷'}<input type="file" accept="image/*" style={{display:'none'}} onChange={e=>pick(e,r.i)}/></label>
-   <input maxLength={40} placeholder="Producto" value={r.n} onChange={e=>upd(i,'n',e.target.value)}/>
-   <input type="number" min="0" style={{width:84}} placeholder="$" value={r.p} onChange={e=>upd(i,'p',e.target.value)}/>
-   <button className="x" onClick={()=>setRows(rows.filter((_,j)=>j!==i))}>×</button></div>)}
+  {rows.map((r,i)=>{const on=r.oe>now;return <div key={r.i} style={{marginBottom:12}}>
+   <div style={{display:'flex',gap:6,alignItems:'center'}}>
+    <label className="cam" style={{margin:0}}>{ph[r.i]?<img src={ph[r.i]} alt=""/>:'📷'}<input type="file" accept="image/*" style={{display:'none'}} onChange={e=>pick(e,r.i)}/></label>
+    <input maxLength={40} placeholder="Producto" value={r.n} onChange={e=>upd(i,'n',e.target.value)}/>
+    <input type="number" min="0" style={{width:84}} placeholder="$" value={r.p} onChange={e=>upd(i,'p',e.target.value)}/>
+    <button className="x" onClick={()=>setRows(rows.filter((_,j)=>j!==i))}>×</button></div>
+   <div style={{display:'flex',gap:8,alignItems:'center',marginTop:6,paddingLeft:56}}>
+    <label className="ofr"><input type="checkbox" checked={on} onChange={e=>upd2(i,e.target.checked?{oe:Date.now()+864e5,o:r.o||''}:{oe:0,o:''})}/> ⚡ Oferta 24 h</label>
+    {on&&<><input type="number" min="0" style={{width:110}} placeholder="Precio oferta" value={r.o||''} onChange={e=>upd(i,'o',e.target.value)}/><span className="note">{left(r.oe-now)}</span></>}
+   </div></div>})}
   {rows.length<MAXP&&<button className="btn" onClick={()=>setRows([...rows,{n:'',p:'',i:rid()}])}>+ Agregar producto</button>}
   <button className="btn p" disabled={busy} onClick={save}>{busy?'Guardando…':'Guardar puesto'}</button>
   <button className="btn" onClick={async()=>{try{await deleteDoc(doc(db,'sessions',uid))}catch(e){};onExit()}}>Cerrar sesión</button>
@@ -230,7 +251,7 @@ function Admin({uid,isAdmin,setIsAdmin,V,P,onClose}){
    <div className="stat"><div>Vendedores en el sistema</div><b>{V.length}</b> <span>de {MAXV}</span>
     <div className="bar"><i style={{width:Math.min(100,V.length/MAXV*100)+'%'}}/></div></div>
    <div className="cats">{CATS.map(c=><div key={c[0]}><span>{c[2]} {c[1]}</span><b>{V.filter(v=>v.cat===c[0]).length}</b></div>)}</div>
-   <div className="note" style={{marginTop:10}}>Fotos de promociones publicadas: {P.length}</div></>}
+   <div className="note" style={{marginTop:10}}>Fotos de promociones publicadas: {P.length}</div><div className="note">Ofertas relámpago activas: {V.reduce((a,v)=>a+v.products.filter(p=>isOn(p,Date.now())).length,0)}</div></>}
   {tab==='ven'&&<>
    <label>Nombre del vendedor</label><input maxLength={40} value={n} onChange={e=>setN(e.target.value)}/>
    <label>Teléfono (10 dígitos)</label><input inputMode="numeric" maxLength={10} value={t} onChange={e=>setT(e.target.value)}/>
@@ -255,6 +276,8 @@ function Admin({uid,isAdmin,setIsAdmin,V,P,onClose}){
 }
 
 function App(){
+ const [now,setNow]=useState(Date.now()),[fp,setFp]=useState({})
+ useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(t)},[])
  const [inst,setInst]=useState(window.__ip||null),[std,setStd]=useState(window.matchMedia('(display-mode: standalone)').matches)
  useEffect(()=>{const f=()=>setInst(window.__ip||null),g=()=>{setStd(true);setInst(null)};window.addEventListener('ipready',f);window.addEventListener('appinstalled',g);return()=>{window.removeEventListener('ipready',f);window.removeEventListener('appinstalled',g)}},[])
  const install=async()=>{if(inst){inst.prompt();try{await inst.userChoice}catch(e){};setInst(null);window.__ip=null}else setModal('i')}
@@ -265,6 +288,8 @@ function App(){
  useEffect(()=>onSnapshot(query(collection(db,'vendors'),limit(MAXV)),s=>setV(s.docs.map(d=>({id:d.id,...d.data(),products:d.data().products||[]}))),e=>setAuthErr(err(e))),[])
  useEffect(()=>onSnapshot(query(collection(db,'promos'),limit(40)),s=>setP(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.ts||0)-(a.ts||0))),()=>{}),[])
  const mine=V.find(v=>v.id===vid)
+ const offers=V.flatMap(v=>v.products.filter(p=>isOn(p,now)).map(p=>({v,p}))).sort((a,b)=>a.p.oe-b.p.oe).slice(0,30),okey=offers.map(o=>o.v.id+o.p.i).join()
+ useEffect(()=>{[...new Set(offers.map(o=>o.v.id))].filter(id=>!(id in fp)).forEach(id=>{getDoc(doc(db,'fotos',id)).then(d=>setFp(x=>({...x,[id]:d.exists()?(d.data().m||{}):{}}))).catch(()=>setFp(x=>({...x,[id]:{}})))})},[okey])
  const need=()=>{if(!uid){alert('Aún no hay conexión con la base de datos'+(authErr?' ('+authErr+')':'')+'. Espera un momento y reintenta.');return false}return true}
  const L=V.filter(v=>(cat==='todos'||v.cat===cat)&&(!q||v.name.toLowerCase().includes(q.toLowerCase())||v.products.some(p=>p.n.toLowerCase().includes(q.toLowerCase()))))
  return <>
@@ -278,12 +303,19 @@ function App(){
      {items.length?<div className="ph">{items.map(p=><div className="s" key={p.id}><img src={p.img} alt=""/>{p.title&&<div className="cap">{p.title}</div>}</div>)}</div>
       :<div className="empty">{S.e}<small>Promociones muy pronto</small></div>}
      <div className="bd"><h2>{S.t}</h2><p>{S.s}</p><button className="btn p" onClick={()=>setModal(k==='sillas'?'s':'f')}>{S.b}</button></div></section>})}</div>
+   {offers.length>0&&<><div className="st"><h2 style={{margin:0}}>⚡ Ofertas relámpago</h2><span className="note">solo por hoy</span></div>
+    <div className="offers">{offers.map(({v,p})=>{const c=catOf(v.cat);return <div className="of" key={v.id+p.i} onClick={()=>setSel(v)}>
+     <div className="ofi">{fp[v.id]&&fp[v.id][p.i]?<img src={fp[v.id][p.i]} alt=""/>:<span>{c?c[2]:'🏷️'}</span>}<b className="pct">-{Math.round((1-p.o/p.p)*100)}%</b></div>
+     <div className="ofn">{p.n}</div><div className="ofv">{v.name}</div>
+     <div><s className="old">${p.p}</s> <b className="new">${p.o}</b></div>
+     <div className="ofl">⏳ {left(p.oe-now)}</div>
+     <button className="btn p sm" onClick={e=>{e.stopPropagation();wa('52'+v.phone,`Hola ${v.name}, quiero la oferta de hoy: ${p.n} a $${p.o}`)}}>Pedir oferta</button></div>})}</div></>}
    <div className="st"><h2 style={{margin:0}}>Tianguis</h2><span className="note">{V.length} puestos</span></div>
    <input className="search" placeholder="Buscar puesto o producto" value={q} onChange={e=>setQ(e.target.value)}/>
    <div className="chips"><button className={'chip'+(cat==='todos'?' on':'')} onClick={()=>setCat('todos')}>Todos</button>
     {CATS.map(c=><button key={c[0]} className={'chip'+(cat===c[0]?' on':'')} onClick={()=>setCat(c[0])}>{c[2]} {c[1]}</button>)}</div>
    <div className="grid">{L.map(v=>{const c=catOf(v.cat);return <div className="vc" key={v.id} onClick={()=>setSel(v)}>
-    <div className="av">{v.products[0]?.e||(c?c[2]:'🏪')}</div><b>{v.name}</b>{c&&<span className="tag">{c[1]}</span>}<div className="note">{v.products.length} productos</div></div>})}</div>
+    <div className="av">{v.products[0]?.e||(c?c[2]:'🏪')}</div><b>{v.name}</b>{c&&<span className="tag">{c[1]}</span>}{v.products.some(p=>isOn(p,now))&&<div><span className="tag hot">⚡ Oferta hoy</span></div>}<div className="note">{v.products.length} productos</div></div>})}</div>
    {!L.length&&<div className="note" style={{textAlign:'center',padding:24}}>{V.length?'No hay puestos en esta categoría.':'Aún no hay puestos.'}</div>}
    <footer>Tiendita punto com Altamira · Cotizaciones estimadas, se confirman por WhatsApp<br/><a href="#" onClick={e=>{e.preventDefault();if(need())setModal('a')}}>Administrador</a></footer>
   </div>
